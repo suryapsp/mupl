@@ -30,7 +30,7 @@
   (cond [(aunit? l) null]
         [#t (cons (apair-e1 l) (mupllist->racketlist (apair-e2 l)))]))
 
-;; Problem 2
+;; interpreter
 
 ;; lookup a variable in an environment
 ;; Do NOT change this function
@@ -46,6 +46,7 @@
 (define (eval-under-env e env)
   (cond [(var? e) 
          (envlookup env (var-string e))]
+        
         [(add? e) 
          (let ([v1 (eval-under-env (add-e1 e) env)]
                [v2 (eval-under-env (add-e2 e) env)])
@@ -54,7 +55,68 @@
                (int (+ (int-num v1) 
                        (int-num v2)))
                (error "MUPL addition applied to non-number")))]
-        ;; CHANGE add more cases here
+
+        [(int? e) e]
+
+        [(aunit? e) e]
+
+        [(closure? e) e]
+        
+        [(ifgreater? e)
+         (let ([v1 (eval-under-env (ifgreater-e1 e) env)]
+               [v2 (eval-under-env (ifgreater-e2 e) env)])
+           (if (and (int? v1)
+                    (int? v2))
+               (if (> (int-num v1) (int-num v2))
+                   (eval-under-env (ifgreater-e3 e) env)
+                   (eval-under-env (ifgreater-e4 e) env))
+               (error "MUPL ifgreater applied to non-number")))]
+
+        [(fun? e)
+         (closure env e)]
+
+        [(call? e)
+         (let ([v1 (eval-under-env (call-funexp e) env)]
+               [v2 (eval-under-env (call-actual e) env)])
+
+               (if (closure? v1)
+                   (let ([fun-name (fun-nameopt (closure-fun v1))]
+                         [argument-name (fun-formal (closure-fun v1))]
+                         [fun_body (fun-body (closure-fun v1))])
+                         (eval-under-env fun_body (append (if fun-name
+                                                              (list (cons fun-name v1))
+                                                              null)
+                                                          (cons (cons argument-name v2) (closure-env v1)))))
+                     (error "It is not a closure")))]
+
+        [(mlet? e)
+         (let ([v (eval-under-env (mlet-e e) env)])
+           (eval-under-env (mlet-body e) (append (list (cons (mlet-var e) v)) env)))]
+
+        [(apair? e)
+         (let ([v1 (eval-under-env (apair-e1 e) env)]
+               [v2 (eval-under-env (apair-e2 e) env)])
+           (apair v1 v2))]
+
+        [(fst? e)
+         (let ([v (eval-under-env (fst-e e) env)])
+           (if (apair? v)
+               (apair-e1 v)
+               (error "fst doesn't work for non pair")))]
+
+        [(snd? e)
+         (let ([v (eval-under-env (snd-e e) env)])
+           (if (apair? v)
+               (apair-e2 v)
+               (error "snd doesn't work for non pair")))]
+
+        [(isaunit? e)
+         (let ([v (eval-under-env (isaunit-e e) env)])
+           (if (aunit? v)
+               (int 1)
+               (int 0)))]
+         
+        
         [#t (error (format "bad MUPL expression: ~v" e))]))
 
 ;; Do NOT change
