@@ -1,7 +1,8 @@
 #lang racket
-(provide (all-defined-out)) ;; so we can put tests in a second file
+(provide (all-defined-out)) 
 
-;; definition of structures for MUPL programs - Do NOT change
+;; definition of structures for MUPL programs
+
 (struct var  (string) #:transparent)  ;; a variable, e.g., (var "foo")
 (struct int  (num)    #:transparent)  ;; a constant number, e.g., (int 17)
 (struct add  (e1 e2)  #:transparent)  ;; add two expressions
@@ -15,7 +16,6 @@
 (struct aunit ()    #:transparent) ;; unit value -- good for ending a list
 (struct isaunit (e) #:transparent) ;; evaluate to 1 if e is unit else 0
 
-;; a closure is not in "source" programs but /is/ a MUPL value; it is what functions evaluate to
 (struct closure (env fun) #:transparent) 
 
 ;; racketlist->mupllist
@@ -30,22 +30,21 @@
   (cond [(aunit? l) null]
         [#t (cons (apair-e1 l) (mupllist->racketlist (apair-e2 l)))]))
 
-;; interpreter
-
 ;; lookup a variable in an environment
-;; Do NOT change this function
+
 (define (envlookup env str)
   (cond [(null? env) (error "unbound variable during evaluation" str)]
         [(equal? (car (car env)) str) (cdr (car env))]
         [#t (envlookup (cdr env) str)]))
 
-;; Do NOT change the two cases given to you.  
-;; DO add more cases for other kinds of MUPL expressions.
-;; We will test eval-under-env by calling it directly even though
-;; "in real life" it would be a helper function of eval-exp.
+;; evaluate under env
+
 (define (eval-under-env e env)
-  (cond [(var? e) 
+  
+  (cond [(var? e) ;;var
          (envlookup env (var-string e))]
+
+        ;; addition
         
         [(add? e) 
          (let ([v1 (eval-under-env (add-e1 e) env)]
@@ -56,11 +55,19 @@
                        (int-num v2)))
                (error "MUPL addition applied to non-number")))]
 
+        ;; integer
+        
         [(int? e) e]
 
+        ;; aunit(null)
+        
         [(aunit? e) e]
 
+        ;; closure
+        
         [(closure? e) e]
+
+        ;; ifgreater
         
         [(ifgreater? e)
          (let ([v1 (eval-under-env (ifgreater-e1 e) env)]
@@ -72,9 +79,12 @@
                    (eval-under-env (ifgreater-e4 e) env))
                (error "MUPL ifgreater applied to non-number")))]
 
+        ;; fun
         [(fun? e)
          (closure env e)]
 
+        ;; call the fun with env
+        
         [(call? e)
          (let ([v1 (eval-under-env (call-funexp e) env)]
                [v2 (eval-under-env (call-actual e) env)])
@@ -89,49 +99,70 @@
                                                           (cons (cons argument-name v2) (closure-env v1)))))
                      (error "It is not a closure")))]
 
+        ;; mlet
+        
         [(mlet? e)
          (let ([v (eval-under-env (mlet-e e) env)])
            (eval-under-env (mlet-body e) (append (list (cons (mlet-var e) v)) env)))]
 
+        ;; pair
+        
         [(apair? e)
          (let ([v1 (eval-under-env (apair-e1 e) env)]
                [v2 (eval-under-env (apair-e2 e) env)])
            (apair v1 v2))]
 
+        ;; first value of the pair
+        
         [(fst? e)
          (let ([v (eval-under-env (fst-e e) env)])
            (if (apair? v)
                (apair-e1 v)
                (error "fst doesn't work for non pair")))]
 
+        ;; second value of the pair
+        
         [(snd? e)
          (let ([v (eval-under-env (snd-e e) env)])
            (if (apair? v)
                (apair-e2 v)
                (error "snd doesn't work for non pair")))]
 
+        ;; isaunit
+        
         [(isaunit? e)
          (let ([v (eval-under-env (isaunit-e e) env)])
            (if (aunit? v)
                (int 1)
                (int 0)))]
          
+        ;; true for all other results
         
         [#t (error (format "bad MUPL expression: ~v" e))]))
 
-;; Do NOT change
+;; evaluate expression
+
 (define (eval-exp e)
   (eval-under-env e null))
         
-;; Problem 3
+;; additional extended functions
 
-(define (ifaunit e1 e2 e3) "CHANGE")
+(define (ifaunit e1 e2 e3)
+  (ifgreater (isaunit e1) (int 0) e2 e3))
 
-(define (mlet* lstlst e2) "CHANGE")
+(define (mlet* lstlst e2)
+  (if (null? lstlst)
+      e2
+      (mlet (car (car lstlst)) (cdr (car lstlst))
+            (mlet* (cdr lstlst) e2)))
+  )
 
-(define (ifeq e1 e2 e3 e4) "CHANGE")
+(define (ifeq e1 e2 e3 e4)
+  (mlet* (list (cons "_x" e1) (cons "_y" e2))
+         (ifgreater (var "_x") (var "_y") e4
+                    (ifgreater (var "_y") (var "_x") e4 e3))))
 
-;; Problem 4
+;; map
 
 (define mupl-map "CHANGE")
 
@@ -139,19 +170,4 @@
   (mlet "map" mupl-map
         "CHANGE (notice map is now in MUPL scope)"))
 
-;; Challenge Problem
 
-(struct fun-challenge (nameopt formal body freevars) #:transparent) ;; a recursive(?) 1-argument function
-
-;; We will test this function directly, so it must do
-;; as described in the assignment
-(define (compute-free-vars e) "CHANGE")
-
-;; Do NOT share code with eval-under-env because that will make
-;; auto-grading and peer assessment more difficult, so
-;; copy most of your interpreter here and make minor changes
-(define (eval-under-env-c e env) "CHANGE")
-
-;; Do NOT change this
-(define (eval-exp-c e)
-  (eval-under-env-c (compute-free-vars e) null))
