@@ -164,10 +164,19 @@
 
 ;; map
 
-(define mupl-map "CHANGE")
+(define mupl-map
+  (fun "map" "f"
+       (fun #f "mlist"
+            (ifaunit (var "mlist")
+                     (aunit)
+                     (apair (call (var "f") (fst (var "mlist")))
+                            (call (call (var "map") (var "f"))
+                                  (snd (var "mlist"))))))))
 
 (define mupl-mapAddN 
   (mlet "map" mupl-map
-        "CHANGE (notice map is now in MUPL scope)"))
+        (fun #f "n"
+             (call (var "map") (fun #f "x"
+                                    (add (var "x") (var "n")))))))
 
 
