@@ -15,7 +15,6 @@
 (struct snd  (e)    #:transparent) ;; get second part of a pair
 (struct aunit ()    #:transparent) ;; unit value -- good for ending a list
 (struct isaunit (e) #:transparent) ;; evaluate to 1 if e is unit else 0
-
 (struct closure (env fun) #:transparent) 
 
 ;; racketlist->mupllist
