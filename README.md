@@ -31,5 +31,5 @@ lexical scope
 (snd  (e))                             ;; get second part of a pair
 (aunit ())                             ;; unit value
 (isaunit (e))                          ;; evaluate to 1 if e is unit else 0
-(closure (env fun))                    ;;closures
+(closure (env fun))                    ;; closures
 ```
